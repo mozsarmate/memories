@@ -1,7 +1,6 @@
 package hu.mat.life
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -12,8 +11,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.unit.dp
 import java.lang.Math.toDegrees
@@ -35,6 +38,8 @@ fun RotationDegreeDetector() {
     var center by remember { mutableStateOf(Offset(0f, 0f)) }
     var lines by remember { mutableStateOf(listOf<Offset>()) }
     var totalRotationDegrees by remember { mutableStateOf(0f) }
+    
+    
     
     Scaffold(
         topBar = {
@@ -73,7 +78,7 @@ fun RotationDegreeDetector() {
                 }
             ) {
                 if (path.isNotEmpty()) {
-                    drawPath(path, lines, center)
+                    drawPath(path, lines, totalRotationDegrees)
                 }
             }
         }
@@ -114,14 +119,15 @@ fun calculateRotationDegrees(path: List<Offset>, center: Offset): Float {
     
     return totalDegrees
 }
+
 fun calculateRotationDegrees2(path: List<Offset>): Float {
     if (path.size < 10f) return 0f
     
     var totalDegrees = 0f
     
     val start0 = path[0]
-    val start1 = path[((path.size-1) * 0.1).toInt()]
-    val end0 = path[((path.size-1) * 0.9).toInt()]
+    val start1 = path[((path.size - 1) * 0.1).toInt()]
+    val end0 = path[((path.size - 1) * 0.9).toInt()]
     val end1 = path[path.size - 1]
     
     val startV = start1 - start0
@@ -129,21 +135,59 @@ fun calculateRotationDegrees2(path: List<Offset>): Float {
     
     var degrees = (atan2(endV.y, endV.x) - atan2(startV.y, startV.x)).toFloat()
     degrees = degrees * 180 / Math.PI.toFloat()
-    if(degrees < 0) degrees += 360
+    if (degrees < 0) degrees += 360
     return degrees
 }
 
-fun DrawScope.drawPath(path: List<Offset>, lines: List<Offset>, center: Offset) {
-    for (i in 1 until path.size) {
-        drawLine(
-            color = Color.Red,
-            start = path[i - 1],
-            end = path[i],
-            strokeWidth = 5f
-        )
+fun DrawScope.drawPath(path: List<Offset>, lines: List<Offset>, rotation: Float) {
+    for(i in 0 until path.size-1){
+        drawLine(start = path[i], end = path[i+1], color = getColor(rotation, i / path.size.toFloat()), strokeWidth = 10f)
     }
-
+    
+    /*    drawPath(
+            color = Color.Green,
+            path = ,
+            style = Stroke(
+                width = 3.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+            )
+        )*/
+    
     drawLine(color = Color.Cyan, start = path[0], end = center)
     drawLine(color = Color.Cyan, start = path[path.size - 1], end = center)
 }
+fun getColor(rotation: Float, curProgress : Float) : Color {
+    val colors = listOf<Color>(Color.Red, Color.Green, Color.Blue, Color.Yellow)
+    var offsettedCurPogress = curProgress + (rotation/360)
+    offsettedCurPogress *= colors.size
+    offsettedCurPogress %= colors.size
+    val lowerBound = offsettedCurPogress.toInt()
+    val upperBound = (lowerBound + 1) % colors.size
+    val colorFrom = colors[lowerBound]
+    val colorTo = colors[upperBound]
+    val mixCoef = offsettedCurPogress - lowerBound
+    return mixColors(colorFrom, colorTo, mixCoef)
+}
 
+fun mixColors(a : Color, b : Color, coef : Float) : Color{
+    return Color(red = (a.red * coef + b.red * (1-coef)), blue = (a.blue * coef + b.blue * (1-coef)), green = (a.green * coef + b.green * (1-coef)), alpha = (a.alpha * coef + b.alpha * (1-coef)), colorSpace = a.colorSpace)
+}
+
+/*
+fun convertOffsetsToPath(offsets: List<Offset>): Path {
+    val path = Path()
+    
+    if (offsets.isNotEmpty()) {
+        // Move to the first point
+        val startPoint = offsets.first()
+        path.moveTo(startPoint.x, startPoint.y)
+        
+        // Iterate over the rest of the points
+        for (i in 1 until offsets.size) {
+            val point = offsets[i]
+            path.lineTo(point.x, point.y)
+        }
+    }
+    
+    return path
+}*/
